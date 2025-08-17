@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NeonTube Pro</title>
+    <title>StreamSphere Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -20,6 +20,7 @@
             font-family: 'Poppins', sans-serif;
             background-color: var(--dark-bg);
             color: white;
+            overflow-x: hidden;
         }
         
         .player-container {
@@ -27,19 +28,39 @@
             padding-bottom: 56.25%; /* 16:9 aspect ratio */
             height: 0;
             overflow: hidden;
+            border-radius: 12px;
         }
         
-        #youtube-player {
+        .player-container iframe {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
+            border: none;
+        }
+        
+        .video-card {
+            transition: all 0.3s ease;
+            background: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
         }
         
         .video-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 5px 15px rgba(0, 243, 255, 0.4);
+        }
+        
+        .category-chip {
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+        
+        .category-chip.active {
+            background: var(--card-bg);
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 8px rgba(0, 243, 255, 0.3);
         }
         
         .live-badge {
@@ -53,18 +74,36 @@
             100% { opacity: 0.8; }
         }
         
-        .controls-container {
-            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+        .search-suggestions {
+            position: absolute;
+            width: 100%;
+            background: var(--card-bg);
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
         }
         
-        .progress-bar {
-            height: 3px;
-            background: rgba(255,255,255,0.2);
+        .trending-topic {
+            transition: all 0.2s;
+            cursor: pointer;
         }
         
-        .progress-filled {
-            height: 100%;
-            background: var(--neon-blue);
+        .trending-topic:hover {
+            background: rgba(0, 243, 255, 0.1);
+        }
+        
+        .skeleton-loader {
+            background: linear-gradient(90deg, #1a1a2e 25%, #2a2a4a 50%, #1a1a2e 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
         }
     </style>
 </head>
@@ -77,108 +116,172 @@
                     <div class="flex-shrink-0 flex items-center">
                         <i class="fas fa-play-circle text-3xl text-red-500 mr-2"></i>
                         <span class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
-                            NeonTube
+                            StreamSphere
                         </span>
                     </div>
                 </div>
-                <div class="flex-1 flex justify-center px-2 lg:ml-6 lg:justify-end">
-                    <div class="max-w-xl w-full">
-                        <div class="relative">
-                            <input id="searchInput" 
-                                class="block w-full bg-gray-800 border border-gray-700 rounded-full py-2 pl-10 pr-3 leading-5 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" 
-                                placeholder="Search YouTube..." 
-                                type="search">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <i class="fas fa-search text-gray-400"></i>
-                            </div>
+                <div class="flex-1 flex justify-center px-2 lg:ml-6 lg:justify-end max-w-2xl relative">
+                    <div class="w-full relative">
+                        <input id="searchInput" 
+                            class="block w-full bg-gray-800 border border-gray-700 rounded-full py-2 pl-10 pr-3 leading-5 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm" 
+                            placeholder="Search videos, channels, or categories..." 
+                            type="search"
+                            autocomplete="off">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </div>
+                        <div id="searchSuggestions" class="search-suggestions">
+                            <!-- Suggestions will appear here -->
                         </div>
                     </div>
+                </div>
+                <div class="flex items-center md:ml-4">
+                    <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-800">
+                        <i class="fas fa-moon"></i>
+                    </button>
                 </div>
             </div>
         </div>
     </nav>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <!-- Video Player Section -->
+        <!-- Video Player Section (hidden by default) -->
         <section id="playerSection" class="mb-10 hidden">
-            <div class="player-container rounded-xl overflow-hidden">
-                <div id="youtube-player"></div>
+            <div class="player-container">
+                <iframe id="youtubePlayer" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
             </div>
             <div class="mt-4">
-                <h1 id="videoTitle" class="text-xl font-bold">Video Title</h1>
+                <h1 id="videoTitle" class="text-xl font-bold"></h1>
                 <div class="flex items-center justify-between mt-2">
                     <div class="flex items-center">
                         <img id="channelIcon" src="https://placehold.co/40x40" alt="Channel" class="w-10 h-10 rounded-full mr-3">
                         <div>
-                            <h2 id="channelName" class="font-medium">Channel Name</h2>
-                            <p id="subscriberCount" class="text-gray-400 text-xs">1.2M subscribers</p>
+                            <h2 id="channelName" class="font-medium"></h2>
+                            <p id="viewCount" class="text-gray-400 text-xs"></p>
                         </div>
-                        <button id="subscribeBtn" class="ml-4 bg-red-600 hover:bg-red-700 px-4 py-1 rounded-full text-sm font-medium">
-                            Subscribe
-                        </button>
                     </div>
-                    <div class="flex items-center space-x-2">
-                        <button class="flex items-center space-x-1 bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-full">
-                            <i class="fas fa-thumbs-up"></i>
-                            <span id="likeCount">12K</span>
-                        </button>
-                        <button class="flex items-center space-x-1 bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-full">
-                            <i class="fas fa-thumbs-down"></i>
-                        </button>
-                        <button class="flex items-center space-x-1 bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-full">
-                            <i class="fas fa-share"></i>
-                            <span>Share</span>
-                        </button>
-                    </div>
+                    <button id="playPauseBtn" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-full">
+                        <i class="fas fa-pause"></i> Pause
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Trending Topics Section -->
+        <section id="trendingTopics" class="mb-8 hidden md:block">
+            <h2 class="text-lg font-semibold mb-3">Trending Live Topics</h2>
+            <div class="flex flex-wrap gap-3">
+                <div class="trending-topic px-4 py-2 rounded-full bg-gray-800 text-sm">
+                    <i class="fas fa-gamepad mr-2"></i> Gaming Tournaments
+                </div>
+                <div class="trending-topic px-4 py-2 rounded-full bg-gray-800 text-sm">
+                    <i class="fas fa-music mr-2"></i> Music Concerts
+                </div>
+                <div class="trending-topic px-4 py-2 rounded-full bg-gray-800 text-sm">
+                    <i class="fas fa-futbol mr-2"></i> Sports Events
+                </div>
+                <div class="trending-topic px-4 py-2 rounded-full bg-gray-800 text-sm">
+                    <i class="fas fa-newspaper mr-2"></i> News Broadcasts
+                </div>
+                <div class="trending-topic px-4 py-2 rounded-full bg-gray-800 text-sm">
+                    <i class="fas fa-chalkboard-teacher mr-2"></i> Educational Streams
                 </div>
             </div>
         </section>
 
         <!-- Categories Navigation -->
-        <div class="flex overflow-x-auto space-x-3 py-4 scrollbar-hide mb-6">
-            <button class="category-chip active px-4 py-1 rounded-full flex-shrink-0" data-category="live">
-                <i class="fas fa-satellite-dish mr-2"></i> Live TV
+        <div class="flex overflow-x-auto space-x-3 py-4 mb-6 scrollbar-hide">
+            <button class="category-chip active px-4 py-2 rounded-full flex-shrink-0" data-category="trending">
+                <i class="fas fa-fire mr-2"></i> Trending
             </button>
-            <button class="category-chip px-4 py-1 rounded-full flex-shrink-0" data-category="music">
+            <button class="category-chip px-4 py-2 rounded-full flex-shrink-0" data-category="gaming">
+                <i class="fas fa-gamepad mr-2"></i> Gaming
+            </button>
+            <button class="category-chip px-4 py-2 rounded-full flex-shrink-0" data-category="music">
                 <i class="fas fa-music mr-2"></i> Music
             </button>
-            <button class="category-chip px-4 py-1 rounded-full flex-shrink-0" data-category="sports">
+            <button class="category-chip px-4 py-2 rounded-full flex-shrink-0" data-category="sports">
                 <i class="fas fa-running mr-2"></i> Sports
+            </button>
+            <button class="category-chip px-4 py-2 rounded-full flex-shrink-0" data-category="news">
+                <i class="fas fa-newspaper mr-2"></i> News
             </button>
         </div>
 
         <!-- Content Sections -->
         <div id="contentSections">
-            <!-- Live Streams -->
             <section id="liveSection" class="mb-10">
-                <h2 class="text-xl font-bold mb-4 flex items-center">
-                    <span class="bg-red-500 w-3 h-6 rounded mr-2"></span>
-                    Live Now
-                </h2>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold flex items-center">
+                        <span class="w-3 h-6 bg-red-500 rounded mr-2"></span>
+                        Popular Live Streams
+                    </h2>
+                    <button class="text-blue-400 text-sm hover:underline">View All</button>
+                </div>
                 <div id="liveContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    <!-- Live streams will load here -->
+                    <!-- Skeleton Loaders -->
+                    <div class="video-card h-64 skeleton-loader"></div>
+                    <div class="video-card h-64 skeleton-loader"></div>
+                    <div class="video-card h-64 skeleton-loader"></div>
+                    <div class="video-card h-64 skeleton-loader"></div>
                 </div>
             </section>
 
-            <!-- Music Videos -->
-            <section id="musicSection" class="mb-10">
-                <h2 class="text-xl font-bold mb-4 flex items-center">
-                    <i class="fas fa-music text-pink-500 mr-2"></i>
-                    Popular Music
-                </h2>
-                <div id="musicContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    <!-- Music videos will load here -->
+            <section id="categorySection" class="mb-10">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Recommended For You</h2>
+                    <button class="text-blue-400 text-sm hover:underline">View All</button>
+                </div>
+                <div id="categoryContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <!-- Skeleton Loaders -->
+                    <div class="video-card h-64 skeleton-loader"></div>
+                    <div class="video-card h-64 skeleton-loader"></div>
+                    <div class="video-card h-64 skeleton-loader"></div>
+                    <div class="video-card h-64 skeleton-loader"></div>
                 </div>
             </section>
         </div>
+
+        <!-- Search Results Section (hidden by default) -->
+        <section id="searchResultsSection" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Search Results for "<span id="searchQueryText"></span>"</h2>
+                <span id="resultsCount" class="text-gray-400 text-sm">0 results</span>
+            </div>
+            <div id="searchResultsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Search results will appear here -->
+            </div>
+        </section>
     </main>
 
-    <!-- YouTube IFrame API -->
     <script>
         const API_KEY = 'AIzaSyBLaWwmWVxvdEN8PI108LoUr0xQyQbqHlE';
         let player;
+        let currentVideo = null;
+        let searchTimer;
+        let trendingTopics = [
+            "Gaming Live Streams", "Music Concerts 2023", "Sports Events", 
+            "News Updates", "Tech Conferences", "Coding Streams",
+            "Movie Premieres", "Cooking Shows", "Travel Vlogs",
+            "Fitness Workouts", "Esports Tournaments", "Podcast Live"
+        ];
         
-        // Load YouTube API script
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', () => {
+            loadYouTubeAPI();
+            setupSearch();
+            setupCategoryButtons();
+            setupTrendingTopics();
+            loadInitialContent();
+            
+            // Hide skeleton loaders after a delay (in real app, this would be when data loads)
+            setTimeout(() => {
+                loadLiveStreams();
+                loadCategoryContent('trending');
+            }, 1500);
+        });
+
+        // Load YouTube IFrame API
         function loadYouTubeAPI() {
             const tag = document.createElement('script');
             tag.src = "https://www.youtube.com/iframe_api";
@@ -188,16 +291,7 @@
 
         // Called when YouTube API is ready
         function onYouTubeIframeAPIReady() {
-            player = new YT.Player('youtube-player', {
-                height: '100%',
-                width: '100%',
-                playerVars: {
-                    'autoplay': 1,
-                    'controls': 1,
-                    'disablekb': 0,
-                    'fs': 1,
-                    'rel': 0
-                },
+            player = new YT.Player('youtubePlayer', {
                 events: {
                     'onReady': onPlayerReady,
                     'onStateChange': onPlayerStateChange
@@ -206,204 +300,108 @@
         }
 
         function onPlayerReady(event) {
-            console.log('Player is ready');
+            console.log('YouTube player ready');
         }
 
         function onPlayerStateChange(event) {
-            console.log('Player state changed:', event.data);
-        }
-
-        // Load a video into the player
-        function loadVideo(videoId) {
-            if (player) {
-                player.loadVideoById(videoId);
-                document.getElementById('playerSection').classList.remove('hidden');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            if (event.data === YT.PlayerState.PLAYING) {
+                playPauseBtn.innerHTML = '<i class="fas fa-pause"></i> Pause';
+            } else {
+                playPauseBtn.innerHTML = '<i class="fas fa-play"></i> Play';
             }
         }
 
-        // Initialize the app
-        document.addEventListener('DOMContentLoaded', () => {
-            loadYouTubeAPI();
-            setupSearch();
-            setupCategoryButtons();
-            loadAllContent();
-        });
+        // Setup video player with a specific video
+        function playVideo(videoData) {
+            currentVideo = videoData;
+            document.getElementById('playerSection').classList.remove('hidden');
+            document.getElementById('contentSections').classList.add('hidden');
+            document.getElementById('searchResultsSection').classList.add('hidden');
+            
+            // Update video info
+            document.getElementById('videoTitle').textContent = videoData.title;
+            document.getElementById('channelName').textContent = videoData.channel;
+            document.getElementById('channelIcon').src = videoData.channelThumbnail || 'https://placehold.co/40x40';
+            document.getElementById('viewCount').textContent = videoData.views ? `${videoData.views} views` : 'Live now';
+            
+            // Scroll to player
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // Load the video in the player
+            if (player) {
+                player.loadVideoById(videoData.id);
+                player.playVideo();
+            } else {
+                document.getElementById('youtubePlayer').src = `https://www.youtube.com/embed/${videoData.id}?autoplay=1&enablejsapi=1`;
+            }
+        }
 
-        // Setup search functionality
+        // Setup search functionality with suggestions
         function setupSearch() {
             const searchInput = document.getElementById('searchInput');
+            const suggestionsContainer = document.getElementById('searchSuggestions');
             
-            searchInput.addEventListener('keyup', (e) => {
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimer);
+                
+                const query = this.value.trim();
+                if (query.length === 0) {
+                    suggestionsContainer.style.display = 'none';
+                    return;
+                }
+                
+                searchTimer = setTimeout(() => {
+                    getSearchSuggestions(query);
+                }, 300);
+            });
+            
+            searchInput.addEventListener('focus', function() {
+                if (this.value.trim().length > 0) {
+                    getSearchSuggestions(this.value.trim());
+                }
+            });
+            
+            searchInput.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
-                    searchYouTube(e.target.value.trim());
+                    performSearch(this.value.trim());
+                }
+            });
+            
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                    suggestionsContainer.style.display = 'none';
                 }
             });
         }
 
-        // Search YouTube API
-        async function searchYouTube(query) {
-            if (!query) return;
+        // Get search suggestions
+        function getSearchSuggestions(query) {
+            const suggestionsContainer = document.getElementById('searchSuggestions');
             
-            try {
-                const response = await fetch(
-                    `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=1&q=${encodeURIComponent(query)}&type=video&key=${API_KEY}`
-                );
-                const data = await response.json();
-                
-                if (data.items && data.items.length > 0) {
-                    const video = data.items[0];
-                    loadVideo(video.id.videoId);
-                    updateVideoInfo(
-                        video.snippet.title,
-                        video.snippet.channelTitle,
-                        video.snippet.thumbnails.default.url
-                    );
-                }
-            } catch (error) {
-                console.error("Search error:", error);
-            }
-        }
-
-        // Update video info display
-        function updateVideoInfo(title, channel, thumbnail) {
-            document.getElementById('videoTitle').textContent = title;
-            document.getElementById('channelName').textContent = channel;
-            document.getElementById('channelIcon').src = thumbnail || 'https://placehold.co/40x40';
-        }
-
-        // Setup category buttons
-        function setupCategoryButtons() {
-            document.querySelectorAll('.category-chip').forEach(button => {
-                button.addEventListener('click', function() {
-                    document.querySelectorAll('.category-chip').forEach(btn => {
-                        btn.classList.remove('active');
-                    });
-                    this.classList.add('active');
-                    filterByCategory(this.dataset.category);
-                });
-            });
-        }
-
-        // Filter content by category
-        function filterByCategory(category) {
-            document.querySelectorAll('#contentSections > section').forEach(section => {
-                section.classList.add('hidden');
-            });
+            // In a real app, this would call the YouTube API's suggestion endpoint
+            // For demo purposes, we'll simulate it with local data
+            const filtered = trendingTopics.filter(topic => 
+                topic.toLowerCase().includes(query.toLowerCase())
+            ).slice(0, 5);
             
-            if (category === 'live') {
-                document.getElementById('liveSection').classList.remove('hidden');
-            } else if (category === 'music') {
-                document.getElementById('musicSection').classList.remove('hidden');
-            } else {
-                document.querySelectorAll('#contentSections > section').forEach(section => {
-                    section.classList.remove('hidden');
-                });
+            if (filtered.length === 0) {
+                suggestionsContainer.style.display = 'none';
+                return;
             }
-        }
-
-        // Load all content
-        function loadAllContent() {
-            loadLiveStreams();
-            loadMusicVideos();
-        }
-
-        // Load live streams
-        async function loadLiveStreams() {
-            try {
-                const response = await fetch(
-                    `https://www.googleapis.com/youtube/v3/search?part=snippet&eventType=live&type=video&maxResults=8&key=${API_KEY}`
-                );
-                const data = await response.json();
-                
-                const container = document.getElementById('liveContainer');
-                container.innerHTML = data.items.map(item => createVideoCard(item, 'live')).join('');
-                
-                setupVideoCardListeners();
-            } catch (error) {
-                console.error("Error loading live streams:", error);
-            }
-        }
-
-        // Load music videos
-        async function loadMusicVideos() {
-            try {
-                const response = await fetch(
-                    `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=8&q=music&key=${API_KEY}`
-                );
-                const data = await response.json();
-                
-                const container = document.getElementById('musicContainer');
-                container.innerHTML = data.items.map(item => createVideoCard(item, 'video')).join('');
-                
-                setupVideoCardListeners();
-            } catch (error) {
-                console.error("Error loading music videos:", error);
-            }
-        }
-
-        // Create video card HTML
-        function createVideoCard(item, type) {
-            const isLive = type === 'live';
-            const videoId = isLive ? item.id.videoId : item.id.videoId;
-            const title = item.snippet.title.substring(0, 60) + (item.snippet.title.length > 60 ? '...' : '');
-            const channel = item.snippet.channelTitle;
-            const thumbnail = item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default.url;
             
-            return `
-                <div class="video-card rounded-lg overflow-hidden cursor-pointer transition-all duration-300" data-video-id="${videoId}">
-                    <div class="relative">
-                        <img src="${thumbnail}" 
-                            alt="${title}" 
-                            class="w-full h-48 object-cover">
-                        ${isLive ? `
-                        <span class="live-badge absolute top-2 left-2 text-xs font-bold px-2 py-1 rounded-full flex items-center">
-                            <span class="w-2 h-2 bg-white rounded-full mr-1"></span>
-                            LIVE
-                        </span>
-                        <span class="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
-                            ${Math.floor(Math.random() * 10000).toLocaleString()} watching
-                        </span>
-                        ` : `
-                        <span class="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-1 rounded">
-                            ${Math.floor(Math.random() * 60)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}
-                        </span>
-                        `}
-                    </div>
-                    <div class="p-3">
-                        <div class="flex items-start">
-                            <img src="https://placehold.co/40x40?text=${channel[0]}" 
-                                alt="${channel}"
-                                class="h-10 w-10 rounded-full mr-3">
-                            <div>
-                                <h3 class="font-medium text-sm">${title}</h3>
-                                <p class="text-gray-400 text-xs">${channel}</p>
-                                ${!isLive ? `
-                                <p class="text-gray-500 text-xs mt-1">
-                                    ${Math.floor(Math.random() * 5000000).toLocaleString()} views
-                                </p>
-                                ` : ''}
-                            </div>
-                        </div>
-                    </div>
+            suggestionsContainer.innerHTML = filtered.map(suggestion => `
+                <div class="px-4 py-2 hover:bg-gray-700 cursor-pointer flex items-center">
+                    <i class="fas fa-search mr-2 text-gray-400 text-sm"></i>
+                    <span>${suggestion}</span>
                 </div>
-            `;
-        }
-
-        // Setup click listeners for video cards
-        function setupVideoCardListeners() {
-            document.querySelectorAll('.video-card').forEach(card => {
-                card.addEventListener('click', () => {
-                    const videoId = card.dataset.videoId;
-                    const title = card.querySelector('h3').textContent;
-                    const channel = card.querySelector('p.text-gray-400').textContent;
-                    const thumbnail = card.querySelector('img[alt^="Channel"]').src;
-                    
-                    loadVideo(videoId);
-                    updateVideoInfo(title, channel, thumbnail);
+            `).join('');
+            
+            // Add click handlers
+            suggestionsContainer.querySelectorAll('div').forEach(item => {
+                item.addEventListener('click', function() {
+                    document.getElementById('searchInput').value = item.textContent.trim();
+                    performSearch(item.textContent.trim());
+                    suggestionsContainer.style.display = 'none';
                 });
-            });
-        }
-    </script>
-</body>
-</html>
+           
