@@ -22,24 +22,18 @@
             color: white;
         }
         
-        .player-container {
-            position: relative;
-            padding-bottom: 56.25%; /* 16:9 aspect ratio */
-            height: 0;
-            overflow: hidden;
+        .neon-text {
+            text-shadow: 0 0 8px var(--neon-blue), 0 0 2px var(--neon-purple);
         }
         
-        .player-container iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+        .neon-border {
+            border: 1px solid var(--neon-blue);
+            box-shadow: 0 0 10px var(--neon-blue);
         }
         
-        .video-controls {
-            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
-            transition: opacity 0.3s;
+        .video-card {
+            transition: all 0.3s ease;
+            background: var(--card-bg);
         }
         
         .video-card:hover {
@@ -47,31 +41,16 @@
             box-shadow: 0 5px 15px rgba(0, 243, 255, 0.4);
         }
         
-        .progress-bar {
-            height: 4px;
-            background: rgba(255,255,255,0.2);
+        .category-chip {
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
         }
         
-        .progress-filled {
-            height: 100%;
-            background: var(--neon-blue);
-        }
-        
-        .volume-slider {
-            -webkit-appearance: none;
-            width: 80px;
-            height: 4px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 2px;
-        }
-        
-        .volume-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 12px;
-            height: 12px;
-            background: white;
-            border-radius: 50%;
-            cursor: pointer;
+        .category-chip.active {
+            background: var(--card-bg);
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 8px rgba(0, 243, 255, 0.3);
+            color: white;
         }
         
         .live-badge {
@@ -83,6 +62,17 @@
             0% { opacity: 0.8; }
             50% { opacity: 1; }
             100% { opacity: 0.8; }
+        }
+        
+        .loading-dots:after {
+            content: '.';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { color: rgba(0,0,0,0); text-shadow: 0 0 0 rgba(0,0,0,0); }
+            40% { color: white; text-shadow: 0 0 0 rgba(0,0,0,0); }
+            60%, 100% { text-shadow: 0 0 0.5em white; }
         }
     </style>
 </head>
@@ -117,44 +107,6 @@
     </nav>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <!-- Video Player Section -->
-        <section id="playerSection" class="mb-10 hidden">
-            <div class="player-container rounded-xl overflow-hidden">
-                <iframe id="youtubePlayer" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-            </div>
-            <div class="mt-4">
-                <h1 id="videoTitle" class="text-xl font-bold">Video Title</h1>
-                <div class="flex items-center justify-between mt-2">
-                    <div class="flex items-center">
-                        <img id="channelIcon" src="https://placehold.co/40x40" alt="Channel" class="w-10 h-10 rounded-full mr-3">
-                        <div>
-                            <h2 id="channelName" class="font-medium">Channel Name</h2>
-                            <p id="subscriberCount" class="text-gray-400 text-xs">1.2M subscribers</p>
-                        </div>
-                        <button id="subscribeBtn" class="ml-4 bg-red-600 hover:bg-red-700 px-4 py-1 rounded-full text-sm font-medium">
-                            Subscribe
-                        </button>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <button class="flex items-center space-x-1 bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-full">
-                            <i class="fas fa-thumbs-up"></i>
-                            <span id="likeCount">12K</span>
-                        </button>
-                        <button class="flex items-center space-x-1 bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-full">
-                            <i class="fas fa-thumbs-down"></i>
-                        </button>
-                        <button class="flex items-center space-x-1 bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-full">
-                            <i class="fas fa-share"></i>
-                            <span>Share</span>
-                        </button>
-                        <button class="flex items-center space-x-1 bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-full">
-                            <i class="fas fa-ellipsis-h"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
         <!-- Categories Navigation -->
         <div class="flex overflow-x-auto space-x-3 py-4 scrollbar-hide mb-6">
             <button class="category-chip active px-4 py-1 rounded-full flex-shrink-0" data-category="live">
@@ -169,10 +121,23 @@
             <button class="category-chip px-4 py-1 rounded-full flex-shrink-0" data-category="gaming">
                 <i class="fas fa-gamepad mr-2"></i> Gaming
             </button>
+            <button class="category-chip px-4 py-1 rounded-full flex-shrink-0" data-category="news">
+                <i class="fas fa-newspaper mr-2"></i> News
+            </button>
         </div>
 
-        <!-- Content Sections -->
-        <div id="contentSections">
+        <!-- Search Results / Featured Content -->
+        <div id="searchResults" class="hidden">
+            <h2 class="text-xl font-bold mb-4" id="searchResultsTitle">
+                Search Results for "<span id="searchQuery"></span>"
+            </h2>
+            <div id="searchResultsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Search results will appear here -->
+            </div>
+        </div>
+
+        <!-- Featured Content -->
+        <div id="featuredContent">
             <!-- Live Streams -->
             <section id="liveSection" class="mb-10">
                 <h2 class="text-xl font-bold mb-4 flex items-center">
@@ -194,76 +159,45 @@
                     <!-- Music videos will load here -->
                 </div>
             </section>
+
+            <!-- Sports Videos -->
+            <section id="sportsSection" class="mb-10">
+                <h2 class="text-xl font-bold mb-4 flex items-center">
+                    <i class="fas fa-running text-green-500 mr-2"></i>
+                    Sports Highlights
+                </h2>
+                <div id="sportsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <!-- Sports videos will load here -->
+                </div>
+            </section>
         </div>
     </main>
 
     <script>
         const API_KEY = 'AIzaSyBLaWwmWVxvdEN8PI108LoUr0xQyQbqHlE';
-        let player;
-        let currentVideoId = '';
+        let searchTimeout;
         
         // Initialize the app
         document.addEventListener('DOMContentLoaded', () => {
-            loadYouTubeAPI();
             setupSearch();
             setupCategoryButtons();
             loadAllContent();
         });
-
-        // Load YouTube IFrame API
-        function loadYouTubeAPI() {
-            const tag = document.createElement('script');
-            tag.src = "https://www.youtube.com/iframe_api";
-            const firstScriptTag = document.getElementsByTagName('script')[0];
-            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-        }
-
-        // Called when YouTube API is ready
-        function onYouTubeIframeAPIReady() {
-            player = new YT.Player('youtubePlayer', {
-                events: {
-                    'onReady': onPlayerReady,
-                    'onStateChange': onPlayerStateChange
-                }
-            });
-        }
-
-        function onPlayerReady(event) {
-            // Player is ready
-            console.log('Player ready');
-        }
-
-        function onPlayerStateChange(event) {
-            // Handle player state changes (playing, paused, ended, etc.)
-            console.log('Player state changed:', event.data);
-        }
-
-        // Setup video player with a specific video
-        function setupVideoPlayer(videoId, title, channel, thumbnail) {
-            currentVideoId = videoId;
-            document.getElementById('playerSection').classList.remove('hidden');
-            document.getElementById('videoTitle').textContent = title;
-            document.getElementById('channelName').textContent = channel;
-            document.getElementById('channelIcon').src = thumbnail || 'https://placehold.co/40x40';
-            
-            // Scroll to player
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            
-            // Load the video in the player
-            if (player) {
-                player.loadVideoById(videoId);
-            } else {
-                document.getElementById('youtubePlayer').src = `https://www.youtube.com/embed/${videoId}?autoplay=1&enablejsapi=1`;
-            }
-        }
 
         // Setup search functionality
         function setupSearch() {
             const searchInput = document.getElementById('searchInput');
             
             searchInput.addEventListener('keyup', (e) => {
-                if (e.key === 'Enter') {
-                    searchYouTube(e.target.value.trim());
+                if (e.key === 'Enter' || searchInput.value.trim() !== '') {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        searchYouTube(e.target.value.trim());
+                    }, 800);
+                } else if (searchInput.value.trim() === '') {
+                    // Show featured content when search is cleared
+                    document.getElementById('searchResults').classList.add('hidden');
+                    document.getElementById('featuredContent').classList.remove('hidden');
                 }
             });
         }
@@ -272,25 +206,51 @@
         async function searchYouTube(query) {
             if (!query) return;
             
+            const resultsContainer = document.getElementById('searchResultsContainer');
+            document.getElementById('searchQuery').textContent = query;
+            document.getElementById('searchResults').classList.remove('hidden');
+            document.getElementById('featuredContent').classList.add('hidden');
+            
+            resultsContainer.innerHTML = `
+                <div class="col-span-full text-center py-10">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-2"></div>
+                    <p>Searching YouTube for "${query}"<span class="loading-dots"></span></p>
+                </div>
+            `;
+            
             try {
                 const response = await fetch(
-                    `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=12&q=${encodeURIComponent(query)}&type=video&key=${API_KEY}`
+                    `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=24&q=${encodeURIComponent(query)}&type=video&key=${API_KEY}`
                 );
                 const data = await response.json();
                 
-                // For demo, just play the first result
-                if (data.items && data.items.length > 0) {
-                    const video = data.items[0];
-                    setupVideoPlayer(
-                        video.id.videoId,
-                        video.snippet.title,
-                        video.snippet.channelTitle,
-                        video.snippet.thumbnails.default.url
-                    );
-                }
+                displaySearchResults(data.items);
             } catch (error) {
                 console.error("Search error:", error);
+                resultsContainer.innerHTML = `
+                    <div class="col-span-full text-center py-8">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-2xl mb-2"></i>
+                        <p class="text-gray-400">Failed to load search results</p>
+                    </div>
+                `;
             }
+        }
+
+        // Display search results
+        function displaySearchResults(items) {
+            const container = document.getElementById('searchResultsContainer');
+            
+            if (!items || items.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-8">
+                        <i class="fas fa-search text-blue-500 text-2xl mb-2"></i>
+                        <p class="text-gray-400">No results found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = items.map(item => createVideoCard(item, 'search')).join('');
         }
 
         // Setup category buttons
@@ -312,9 +272,12 @@
 
         // Filter content by category
         function filterByCategory(category) {
-            document.querySelectorAll('#contentSections > section').forEach(section => {
+            document.querySelectorAll('#featuredContent > section').forEach(section => {
                 section.classList.add('hidden');
             });
+            
+            document.getElementById('searchResults').classList.add('hidden');
+            document.getElementById('featuredContent').classList.remove('hidden');
             
             switch(category) {
                 case 'live':
@@ -323,9 +286,12 @@
                 case 'music':
                     document.getElementById('musicSection').classList.remove('hidden');
                     break;
+                case 'sports':
+                    document.getElementById('sportsSection').classList.remove('hidden');
+                    break;
                 default:
                     // Show all sections
-                    document.querySelectorAll('#contentSections > section').forEach(section => {
+                    document.querySelectorAll('#featuredContent > section').forEach(section => {
                         section.classList.remove('hidden');
                     });
             }
@@ -335,6 +301,7 @@
         function loadAllContent() {
             loadLiveStreams();
             loadMusicVideos();
+            loadSportsVideos();
         }
 
         // Load live streams from YouTube
@@ -347,20 +314,14 @@
                 
                 const container = document.getElementById('liveContainer');
                 container.innerHTML = data.items.map(item => createVideoCard(item, 'live')).join('');
-                
-                // Add click handlers to all video cards
-                document.querySelectorAll('.video-card').forEach(card => {
-                    card.addEventListener('click', () => {
-                        const videoId = card.dataset.videoId;
-                        const title = card.querySelector('h3').textContent;
-                        const channel = card.querySelector('p.text-gray-400').textContent;
-                        const thumbnail = card.querySelector('img').src;
-                        
-                        setupVideoPlayer(videoId, title, channel, thumbnail);
-                    });
-                });
             } catch (error) {
                 console.error("Error loading live streams:", error);
+                document.getElementById('liveContainer').innerHTML = `
+                    <div class="col-span-full text-center py-8">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-2xl mb-2"></i>
+                        <p class="text-gray-400">Failed to load live streams</p>
+                    </div>
+                `;
             }
         }
 
@@ -374,20 +335,23 @@
                 
                 const container = document.getElementById('musicContainer');
                 container.innerHTML = data.items.map(item => createVideoCard(item, 'video')).join('');
-                
-                // Add click handlers to all video cards
-                document.querySelectorAll('.video-card').forEach(card => {
-                    card.addEventListener('click', () => {
-                        const videoId = card.dataset.videoId;
-                        const title = card.querySelector('h3').textContent;
-                        const channel = card.querySelector('p.text-gray-400').textContent;
-                        const thumbnail = card.querySelector('img').src;
-                        
-                        setupVideoPlayer(videoId, title, channel, thumbnail);
-                    });
-                });
             } catch (error) {
                 console.error("Error loading music videos:", error);
+            }
+        }
+
+        // Load sports videos
+        async function loadSportsVideos() {
+            try {
+                const response = await fetch(
+                    `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=8&q=sports&key=${API_KEY}`
+                );
+                const data = await response.json();
+                
+                const container = document.getElementById('sportsContainer');
+                container.innerHTML = data.items.map(item => createVideoCard(item, 'video')).join('');
+            } catch (error) {
+                console.error("Error loading sports videos:", error);
             }
         }
 
@@ -402,7 +366,7 @@
             const thumbnail = item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default.url;
             
             return `
-                <div class="video-card rounded-lg overflow-hidden cursor-pointer transition-all duration-300" data-video-id="${videoId}">
+                <div class="video-card rounded-lg overflow-hidden cursor-pointer" data-video-id="${videoId}">
                     <div class="relative">
                         <img src="${thumbnail}" 
                             alt="${title}" 
