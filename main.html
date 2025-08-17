@@ -10,25 +10,14 @@
         :root {
             --neon-blue: #00f3ff;
             --neon-pink: #ff00ff;
-            --neon-purple: #8a2be2;
             --dark-bg: #0f0f1a;
             --card-bg: #1a1a2e;
-            --accent: #ff4d4d;
         }
         
         body {
             font-family: 'Poppins', sans-serif;
             background-color: var(--dark-bg);
             color: white;
-        }
-        
-        .neon-text {
-            text-shadow: 0 0 8px var(--neon-blue), 0 0 2px var(--neon-purple);
-        }
-        
-        .neon-border {
-            border: 1px solid var(--neon-blue);
-            box-shadow: 0 0 10px var(--neon-blue);
         }
         
         .video-card {
@@ -63,17 +52,6 @@
             50% { opacity: 1; }
             100% { opacity: 0.8; }
         }
-        
-        .loading-dots:after {
-            content: '.';
-            animation: dots 1.5s steps(5, end) infinite;
-        }
-        
-        @keyframes dots {
-            0%, 20% { color: rgba(0,0,0,0); text-shadow: 0 0 0 rgba(0,0,0,0); }
-            40% { color: white; text-shadow: 0 0 0 rgba(0,0,0,0); }
-            60%, 100% { text-shadow: 0 0 0.5em white; }
-        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -107,6 +85,21 @@
     </nav>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <!-- Video Player Section -->
+        <section id="playerSection" class="mb-10 hidden">
+            <div class="player-container">
+                <iframe id="youtubePlayer" frameborder="0" allowfullscreen></iframe>
+            </div>
+            <div class="mt-4">
+                <h1 id="videoTitle" class="text-xl font-bold"></h1>
+                <div class="flex items-center mt-2">
+                    <button id="playPauseBtn" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm">
+                        <i class="fas fa-play"></i> Play
+                    </button>
+                </div>
+            </div>
+        </section>
+
         <!-- Categories Navigation -->
         <div class="flex overflow-x-auto space-x-3 py-4 scrollbar-hide mb-6">
             <button class="category-chip active px-4 py-1 rounded-full flex-shrink-0" data-category="live">
@@ -176,13 +169,45 @@
     <script>
         const API_KEY = 'AIzaSyBLaWwmWVxvdEN8PI108LoUr0xQyQbqHlE';
         let searchTimeout;
-        
+        let player;
+
         // Initialize the app
         document.addEventListener('DOMContentLoaded', () => {
             setupSearch();
             setupCategoryButtons();
             loadAllContent();
         });
+
+        // Load YouTube IFrame API
+        function loadYouTubeAPI() {
+            const tag = document.createElement('script');
+            tag.src = "https://www.youtube.com/iframe_api";
+            const firstScriptTag = document.getElementsByTagName('script')[0];
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        }
+
+        // Called when YouTube API is ready
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('youtubePlayer', {
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange
+                }
+            });
+        }
+
+        function onPlayerReady(event) {
+            console.log('Player is ready');
+        }
+
+        function onPlayerStateChange(event) {
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            if (event.data === YT.PlayerState.PLAYING) {
+                playPauseBtn.innerHTML = '<i class="fas fa-pause"></i> Pause';
+            } else {
+                playPauseBtn.innerHTML = '<i class="fas fa-play"></i> Play';
+            }
+        }
 
         // Setup search functionality
         function setupSearch() {
@@ -366,7 +391,7 @@
             const thumbnail = item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default.url;
             
             return `
-                <div class="video-card rounded-lg overflow-hidden cursor-pointer" data-video-id="${videoId}">
+                <div class="video-card rounded-lg overflow-hidden cursor-pointer" data-video-id="${videoId}" onclick="playVideo('${videoId}', '${title}')">
                     <div class="relative">
                         <img src="${thumbnail}" 
                             alt="${title}" 
@@ -404,6 +429,15 @@
                 </div>
             `.trim();
         }
-    </script>
-</body>
-</html>
+
+        // Play video function
+        function playVideo(videoId, title) {
+            document.getElementById('videoTitle').textContent = title;
+            document.getElementById('playerSection').classList.remove('hidden');
+            document.getElementById('searchResults').classList.add('hidden');
+            document.getElementById('featuredContent').classList.add('hidden');
+
+            if (player) {
+                player.loadVideoById(videoId);
+                player.playVideo();
+            }
