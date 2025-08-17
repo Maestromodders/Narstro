@@ -29,7 +29,7 @@
             overflow: hidden;
         }
         
-        .player-container iframe {
+        #youtube-player {
             position: absolute;
             top: 0;
             left: 0;
@@ -37,41 +37,9 @@
             height: 100%;
         }
         
-        .video-controls {
-            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
-            transition: opacity 0.3s;
-        }
-        
         .video-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 5px 15px rgba(0, 243, 255, 0.4);
-        }
-        
-        .progress-bar {
-            height: 4px;
-            background: rgba(255,255,255,0.2);
-        }
-        
-        .progress-filled {
-            height: 100%;
-            background: var(--neon-blue);
-        }
-        
-        .volume-slider {
-            -webkit-appearance: none;
-            width: 80px;
-            height: 4px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 2px;
-        }
-        
-        .volume-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 12px;
-            height: 12px;
-            background: white;
-            border-radius: 50%;
-            cursor: pointer;
         }
         
         .live-badge {
@@ -83,6 +51,20 @@
             0% { opacity: 0.8; }
             50% { opacity: 1; }
             100% { opacity: 0.8; }
+        }
+        
+        .controls-container {
+            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+        }
+        
+        .progress-bar {
+            height: 3px;
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .progress-filled {
+            height: 100%;
+            background: var(--neon-blue);
         }
     </style>
 </head>
@@ -120,7 +102,7 @@
         <!-- Video Player Section -->
         <section id="playerSection" class="mb-10 hidden">
             <div class="player-container rounded-xl overflow-hidden">
-                <iframe id="youtubePlayer" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                <div id="youtube-player"></div>
             </div>
             <div class="mt-4">
                 <h1 id="videoTitle" class="text-xl font-bold">Video Title</h1>
@@ -147,9 +129,6 @@
                             <i class="fas fa-share"></i>
                             <span>Share</span>
                         </button>
-                        <button class="flex items-center space-x-1 bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-full">
-                            <i class="fas fa-ellipsis-h"></i>
-                        </button>
                     </div>
                 </div>
             </div>
@@ -165,9 +144,6 @@
             </button>
             <button class="category-chip px-4 py-1 rounded-full flex-shrink-0" data-category="sports">
                 <i class="fas fa-running mr-2"></i> Sports
-            </button>
-            <button class="category-chip px-4 py-1 rounded-full flex-shrink-0" data-category="gaming">
-                <i class="fas fa-gamepad mr-2"></i> Gaming
             </button>
         </div>
 
@@ -197,20 +173,12 @@
         </div>
     </main>
 
+    <!-- YouTube IFrame API -->
     <script>
         const API_KEY = 'AIzaSyBLaWwmWVxvdEN8PI108LoUr0xQyQbqHlE';
         let player;
-        let currentVideoId = '';
         
-        // Initialize the app
-        document.addEventListener('DOMContentLoaded', () => {
-            loadYouTubeAPI();
-            setupSearch();
-            setupCategoryButtons();
-            loadAllContent();
-        });
-
-        // Load YouTube IFrame API
+        // Load YouTube API script
         function loadYouTubeAPI() {
             const tag = document.createElement('script');
             tag.src = "https://www.youtube.com/iframe_api";
@@ -220,7 +188,16 @@
 
         // Called when YouTube API is ready
         function onYouTubeIframeAPIReady() {
-            player = new YT.Player('youtubePlayer', {
+            player = new YT.Player('youtube-player', {
+                height: '100%',
+                width: '100%',
+                playerVars: {
+                    'autoplay': 1,
+                    'controls': 1,
+                    'disablekb': 0,
+                    'fs': 1,
+                    'rel': 0
+                },
                 events: {
                     'onReady': onPlayerReady,
                     'onStateChange': onPlayerStateChange
@@ -229,33 +206,29 @@
         }
 
         function onPlayerReady(event) {
-            // Player is ready
-            console.log('Player ready');
+            console.log('Player is ready');
         }
 
         function onPlayerStateChange(event) {
-            // Handle player state changes (playing, paused, ended, etc.)
             console.log('Player state changed:', event.data);
         }
 
-        // Setup video player with a specific video
-        function setupVideoPlayer(videoId, title, channel, thumbnail) {
-            currentVideoId = videoId;
-            document.getElementById('playerSection').classList.remove('hidden');
-            document.getElementById('videoTitle').textContent = title;
-            document.getElementById('channelName').textContent = channel;
-            document.getElementById('channelIcon').src = thumbnail || 'https://placehold.co/40x40';
-            
-            // Scroll to player
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            
-            // Load the video in the player
+        // Load a video into the player
+        function loadVideo(videoId) {
             if (player) {
                 player.loadVideoById(videoId);
-            } else {
-                document.getElementById('youtubePlayer').src = `https://www.youtube.com/embed/${videoId}?autoplay=1&enablejsapi=1`;
+                document.getElementById('playerSection').classList.remove('hidden');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             }
         }
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', () => {
+            loadYouTubeAPI();
+            setupSearch();
+            setupCategoryButtons();
+            loadAllContent();
+        });
 
         // Setup search functionality
         function setupSearch() {
@@ -274,15 +247,14 @@
             
             try {
                 const response = await fetch(
-                    `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=12&q=${encodeURIComponent(query)}&type=video&key=${API_KEY}`
+                    `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=1&q=${encodeURIComponent(query)}&type=video&key=${API_KEY}`
                 );
                 const data = await response.json();
                 
-                // For demo, just play the first result
                 if (data.items && data.items.length > 0) {
                     const video = data.items[0];
-                    setupVideoPlayer(
-                        video.id.videoId,
+                    loadVideo(video.id.videoId);
+                    updateVideoInfo(
                         video.snippet.title,
                         video.snippet.channelTitle,
                         video.snippet.thumbnails.default.url
@@ -293,19 +265,22 @@
             }
         }
 
+        // Update video info display
+        function updateVideoInfo(title, channel, thumbnail) {
+            document.getElementById('videoTitle').textContent = title;
+            document.getElementById('channelName').textContent = channel;
+            document.getElementById('channelIcon').src = thumbnail || 'https://placehold.co/40x40';
+        }
+
         // Setup category buttons
         function setupCategoryButtons() {
             document.querySelectorAll('.category-chip').forEach(button => {
                 button.addEventListener('click', function() {
-                    // Update active state
                     document.querySelectorAll('.category-chip').forEach(btn => {
                         btn.classList.remove('active');
                     });
                     this.classList.add('active');
-                    
-                    // Get category and filter content
-                    const category = this.dataset.category;
-                    filterByCategory(category);
+                    filterByCategory(this.dataset.category);
                 });
             });
         }
@@ -316,28 +291,24 @@
                 section.classList.add('hidden');
             });
             
-            switch(category) {
-                case 'live':
-                    document.getElementById('liveSection').classList.remove('hidden');
-                    break;
-                case 'music':
-                    document.getElementById('musicSection').classList.remove('hidden');
-                    break;
-                default:
-                    // Show all sections
-                    document.querySelectorAll('#contentSections > section').forEach(section => {
-                        section.classList.remove('hidden');
-                    });
+            if (category === 'live') {
+                document.getElementById('liveSection').classList.remove('hidden');
+            } else if (category === 'music') {
+                document.getElementById('musicSection').classList.remove('hidden');
+            } else {
+                document.querySelectorAll('#contentSections > section').forEach(section => {
+                    section.classList.remove('hidden');
+                });
             }
         }
 
-        // Load all content categories
+        // Load all content
         function loadAllContent() {
             loadLiveStreams();
             loadMusicVideos();
         }
 
-        // Load live streams from YouTube
+        // Load live streams
         async function loadLiveStreams() {
             try {
                 const response = await fetch(
@@ -348,17 +319,7 @@
                 const container = document.getElementById('liveContainer');
                 container.innerHTML = data.items.map(item => createVideoCard(item, 'live')).join('');
                 
-                // Add click handlers to all video cards
-                document.querySelectorAll('.video-card').forEach(card => {
-                    card.addEventListener('click', () => {
-                        const videoId = card.dataset.videoId;
-                        const title = card.querySelector('h3').textContent;
-                        const channel = card.querySelector('p.text-gray-400').textContent;
-                        const thumbnail = card.querySelector('img').src;
-                        
-                        setupVideoPlayer(videoId, title, channel, thumbnail);
-                    });
-                });
+                setupVideoCardListeners();
             } catch (error) {
                 console.error("Error loading live streams:", error);
             }
@@ -375,17 +336,7 @@
                 const container = document.getElementById('musicContainer');
                 container.innerHTML = data.items.map(item => createVideoCard(item, 'video')).join('');
                 
-                // Add click handlers to all video cards
-                document.querySelectorAll('.video-card').forEach(card => {
-                    card.addEventListener('click', () => {
-                        const videoId = card.dataset.videoId;
-                        const title = card.querySelector('h3').textContent;
-                        const channel = card.querySelector('p.text-gray-400').textContent;
-                        const thumbnail = card.querySelector('img').src;
-                        
-                        setupVideoPlayer(videoId, title, channel, thumbnail);
-                    });
-                });
+                setupVideoCardListeners();
             } catch (error) {
                 console.error("Error loading music videos:", error);
             }
@@ -393,10 +344,8 @@
 
         // Create video card HTML
         function createVideoCard(item, type) {
-            if (!item || !item.snippet) return '';
-            
             const isLive = type === 'live';
-            const videoId = isLive ? item.id.videoId : item.id.videoId || item.id;
+            const videoId = isLive ? item.id.videoId : item.id.videoId;
             const title = item.snippet.title.substring(0, 60) + (item.snippet.title.length > 60 ? '...' : '');
             const channel = item.snippet.channelTitle;
             const thumbnail = item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default.url;
@@ -438,7 +387,22 @@
                         </div>
                     </div>
                 </div>
-            `.trim();
+            `;
+        }
+
+        // Setup click listeners for video cards
+        function setupVideoCardListeners() {
+            document.querySelectorAll('.video-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const videoId = card.dataset.videoId;
+                    const title = card.querySelector('h3').textContent;
+                    const channel = card.querySelector('p.text-gray-400').textContent;
+                    const thumbnail = card.querySelector('img[alt^="Channel"]').src;
+                    
+                    loadVideo(videoId);
+                    updateVideoInfo(title, channel, thumbnail);
+                });
+            });
         }
     </script>
 </body>
